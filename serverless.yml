@@ -1,0 +1,65 @@
+service: centercode-api-cron
+
+frameworkVersion: ">=1.2.0 <2.0.0"
+
+provider:
+  name: aws
+  runtime: python2.7
+  region: us-west-2
+  role: myDefaultRole
+  environment:
+    SLS_DEBUG: "*"
+    S3_BUCKET: "centercode-api-cron"
+    DOMAIN_PATH: "https://qa.centercode.com/api/v1/"
+    CENTERCODE_API_KEY: "SONOSb0f84088c57c4481951c60966a1039f1"
+    COMMUNITY_PROJECT_REPORT: "activeProjects"
+    COMMUNITY_USER_REPORT: "activeUsers"
+    COMMUNITY_PROJECT_REPORT_NAME_ORDINAL: 0
+    COMMUNITY_PROJECT_REPORT_KEY_ORDINAL: 1
+    PROJECT_USER_REPORT: "userDataPackages/userAccounts"
+    PROJECT_ISSUE_REPORT: "feedbackDataPackages/issueReports"
+    PROJECT_FEATURE_REQUEST: "feedbackDataPackages/featureRequests"
+    PROJECT_GENERAL_DISCUSSION: "feedbackDataPackages/generalDiscussions"
+
+functions:
+  cron:
+    handler: handler.run
+    timeout: 900
+    #events:
+      # Invoke Lambda function daily
+      #- schedule: rate(1 day)
+
+resources:
+  Resources:
+    myDefaultRole:
+      Type: AWS::IAM::Role
+      Properties:
+        Path: /
+        RoleName: MyDefaultRole # required if you want to use 'serverless deploy --function' later on
+        AssumeRolePolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Principal:
+                Service:
+                  - lambda.amazonaws.com
+              Action: sts:AssumeRole
+        # note that these rights are needed if you want your function to be able to communicate with resources within your vpc
+        ManagedPolicyArns:
+          - arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole
+        Policies:
+          - PolicyName: myPolicyName
+            PolicyDocument:
+              Version: '2012-10-17'
+              Statement:
+                - Effect: Allow # note that these rights are given in the default policy and are required if you want logs out of your lambda(s)
+                  Action:
+                    - s3:ListAllMyBuckets
+                    - s3:GetBucketLocation
+                  Resource: "*"
+                -  Effect: "Allow"
+                   Action:
+                     - "s3:*"
+                   Resource:
+                     - "arn:aws:s3:::${self:provider.environment.S3_BUCKET}"
+                     - "arn:aws:s3:::${self:provider.environment.S3_BUCKET}/*"
